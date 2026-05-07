@@ -8,6 +8,8 @@ buildings ready for export to GIANTS Editor.
 [![Blender](https://img.shields.io/badge/Blender-4.0%2B-orange.svg)](https://www.blender.org/)
 [![FS25](https://img.shields.io/badge/Farming%20Simulator-25-green.svg)](https://www.farming-simulator.com/)
 
+![Classic green Trapezblech hall with red roof](docs/img/hero_classic.png)
+
 ## What it does
 
 You set dimensions, pick a roof type, choose materials per side, and click
@@ -56,6 +58,10 @@ geometry on metal sheet walls.
 - Eaves gutters (Dachrinnen) on sloped roofs
 - Ridge cap (Firstziegel) on gable roofs
 - Planar UV projection per face
+
+| Wood walls with clay tile roof | 3D Trapezblech profile (visible corrugation) |
+| --- | --- |
+| ![Wood walls](docs/img/variant_wood.png) | ![3D profile](docs/img/variant_3d_profile.png) |
 
 ### Interior details
 
