@@ -1,0 +1,19 @@
+schema_version = "1.0.0"
+
+id = "fs25_halle_generator"
+version = "1.0.0"
+name = "FS25 Halle Generator"
+tagline = "Parametrische Maschinenhallen fuer Farming Simulator 25"
+maintainer = "AMS-ABSTAND"
+type = "add-on"
+
+# Funktioniert ab Blender 4.2 (Einfuehrung des Extension-Systems)
+blender_version_min = "4.2.0"
+
+# License (SPDX-Liste: https://spdx.org/licenses/)
+license = [
+  "SPDX:GPL-2.0-or-later",
+]
+
+# Tags helfen beim Auffinden in der Extensions-Liste
+tags = ["3D View", "Add Mesh", "Mesh"]

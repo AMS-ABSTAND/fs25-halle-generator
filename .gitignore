@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+
+# Blender
+*.blend
+*.blend1
+*.blend2
+*.blend3
+*.fbx
+*.obj
+*.dae
+
+# Build artifacts
+fs25_halle_generator-*.zip
+test_output*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Renders & screenshots build folder
+renders_tmp/
