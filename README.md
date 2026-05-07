@@ -4,6 +4,7 @@ Parametric Maschinenhalle (machine hall) generator for Farming Simulator 25.
 A Blender add-on that builds complete, configurable storage and workshop
 buildings ready for export to GIANTS Editor.
 
+[![Test](https://github.com/AMS-ABSTAND/fs25-halle-generator/actions/workflows/test.yml/badge.svg)](https://github.com/AMS-ABSTAND/fs25-halle-generator/actions/workflows/test.yml)
 [![License: GPL-2.0-or-later](https://img.shields.io/badge/License-GPL--2.0--or--later-blue.svg)](LICENSE)
 [![Blender](https://img.shields.io/badge/Blender-4.0%2B-orange.svg)](https://www.blender.org/)
 [![FS25](https://img.shields.io/badge/Farming%20Simulator-25-green.svg)](https://www.farming-simulator.com/)
