@@ -250,6 +250,33 @@ if col_3d:
         print(f"  FAIL: no Skin objects produced")
         mat_ok = False
 
+# Verify UV maps exist on all renderable objects (regression test for Issue #1)
+banner("UV MAPS PRESENT (Issue #1 regression test)")
+uv_ok = True
+for col_name in ["Halle_Gable", "Halle_AllDoors", "Halle_3DProfile",
+                 "Halle_WoodClinker", "Halle_MixedWalls"]:
+    col = bpy.data.collections.get(col_name)
+    if col is None:
+        continue
+    missing = []
+    for obj in col.objects:
+        if obj.type != 'MESH':
+            continue
+        # Collision box is intentionally exempt (wireframe, no rendering)
+        if "_Collision" in obj.name:
+            continue
+        if not obj.data.uv_layers:
+            missing.append(obj.name)
+    if missing:
+        print(f"  FAIL: {col_name} has {len(missing)} objects without UVs:")
+        for n in missing[:5]:
+            print(f"          - {n}")
+        uv_ok = False
+    else:
+        print(f"  OK   {col_name}: all renderable objects have UV maps")
+
+mat_ok = mat_ok and uv_ok
+
 # Summary
 all_ok = all(t[0] for t in tests) and mat_ok
 total_v = sum(t[1] for t in tests)

@@ -68,12 +68,17 @@ def generate_hall(props, context):
     # ------------------------------------------------------------------
     #  HELPER
     # ------------------------------------------------------------------
-    def add_obj(name, vf, mat=None, uv_scale=None):
+    def add_obj(name, vf, mat=None, uv_scale=None, skip_uv=False):
+        """Create an object from (verts, faces). Auto-creates UV map when
+        `props.create_uvs` is enabled, even if `uv_scale` is not passed
+        — falls back to `props.uv_scale`. Pass `skip_uv=True` to opt out
+        (used for the wireframe collision box where UVs are useless)."""
         if not vf or not vf[0]:
             return None
         obj = geom.make_object(name, vf[0], vf[1], col, mat=mat)
-        if uv_scale is not None and props.create_uvs:
-            mats.set_uvs_planar(obj, scale=uv_scale)
+        if props.create_uvs and not skip_uv:
+            scale = uv_scale if uv_scale is not None else props.uv_scale
+            mats.set_uvs_planar(obj, scale=scale)
         created.append(obj)
         return obj
 
@@ -246,7 +251,7 @@ def generate_hall(props, context):
     # ------------------------------------------------------------------
     if props.create_collision:
         v, f = geom.box(-half_w, +half_w, -half_d, +half_d, 0.0, ridge_z)
-        obj = add_obj(f"{base}_Collision", (v, f))
+        obj = add_obj(f"{base}_Collision", (v, f), skip_uv=True)
         if obj:
             obj.display_type = 'WIRE'
             obj.hide_render = True
