@@ -167,8 +167,12 @@ class HALLE_PT_main(Panel):
             if p.create_uvs:
                 box.prop(p, "uv_strategy")
                 box.prop(p, "uv_scale")
-                box.operator("halle.uv_debug", icon='UV')
-                box.label(text="-> Viewport auf Material Preview schalten",
+                box.separator()
+                box.label(text="UV-Debug-Grid:", icon='UV')
+                box.prop(p, "uv_debug_tile_meters")
+                op = box.operator("halle.uv_debug", text="Grid anwenden", icon='UV_DATA')
+                op.tile_meters = p.uv_debug_tile_meters
+                box.label(text="-> Viewport: Material Preview",
                           icon='SHADING_RENDERED')
             box.separator()
             box.prop(p, "fs25_origin_floor")

@@ -1,6 +1,7 @@
 """Blender Operators für das Halle-Addon."""
 
 import bpy
+from bpy.props import FloatProperty
 from bpy.types import Operator
 
 from . import generator
@@ -58,23 +59,33 @@ def _get_or_create_uv_grid():
     return img
 
 
-def _swap_basecolor_to_uv_grid(mat, img):
+def _swap_basecolor_to_uv_grid(mat, img, mapping_scale=1.0):
     """Replace the basecolor input of a material with the UV grid image.
-    Removes existing nodes feeding base color (procedural patterns,
-    image textures), keeping just BSDF + Output."""
+    `mapping_scale`: how many image-tiles fit per UV unit. With UV_LOCAL
+    strategy where 1 UV unit = 1 meter, scale=0.25 means 1 tile per 4m."""
     if not mat.use_nodes:
         mat.use_nodes = True
     nt = mat.node_tree
     nt.nodes.clear()
 
     output = nt.nodes.new("ShaderNodeOutputMaterial")
-    output.location = (400, 0)
+    output.location = (600, 0)
     bsdf = nt.nodes.new("ShaderNodeBsdfPrincipled")
-    bsdf.location = (100, 0)
-    tex = nt.nodes.new("ShaderNodeTexImage")
-    tex.location = (-300, 0)
-    tex.image = img
+    bsdf.location = (300, 0)
 
+    tc = nt.nodes.new("ShaderNodeTexCoord")
+    tc.location = (-700, 0)
+    mp = nt.nodes.new("ShaderNodeMapping")
+    mp.location = (-450, 0)
+    mp.inputs['Scale'].default_value = (mapping_scale, mapping_scale, 1.0)
+
+    tex = nt.nodes.new("ShaderNodeTexImage")
+    tex.location = (-150, 0)
+    tex.image = img
+    tex.interpolation = 'Closest'  # crisp grid lines, no smoothing
+
+    nt.links.new(tc.outputs['UV'], mp.inputs['Vector'])
+    nt.links.new(mp.outputs['Vector'], tex.inputs['Vector'])
     nt.links.new(tex.outputs['Color'], bsdf.inputs['Base Color'])
     nt.links.new(bsdf.outputs[0], output.inputs[0])
 
@@ -93,17 +104,30 @@ class HALLE_OT_uv_debug(Operator):
                       "richtig gemappt sind. 'Halle generieren' macht's wieder rueckgaengig.")
     bl_options = {'REGISTER', 'UNDO'}
 
+    tile_meters: FloatProperty(
+        name="Kachelgroesse (m)",
+        description="Wie viele Meter Wand eine UV-Grid-Kachel ueberdeckt. "
+                    "Groesser = weniger Kacheln = besser lesbar. "
+                    "Kleiner = mehr Kacheln = mehr Detail-Pruefung.",
+        default=4.0, min=0.25, max=20.0,
+        soft_min=1.0, soft_max=10.0,
+    )
+
     def execute(self, context):
         img = _get_or_create_uv_grid()
+        # If 1 UV-unit corresponds to 1 m of wall (default uv_scale=1.0),
+        # then a tile of T meters needs the texture coordinates divided by T.
+        scale = 1.0 / self.tile_meters
         count = 0
         for mat in bpy.data.materials:
             if not mat.name.startswith("Halle_"):
                 continue
             if mat.name == "Halle_Glass":
                 continue  # leave glass transparent
-            _swap_basecolor_to_uv_grid(mat, img)
+            _swap_basecolor_to_uv_grid(mat, img, mapping_scale=scale)
             count += 1
         self.report({'INFO'},
                     f"UV-Grid auf {count} Materialien angewendet "
-                    f"— Viewport in 'Material Preview' schalten zum Sehen.")
+                    f"({self.tile_meters:.1f}m pro Kachel). "
+                    f"Viewport in 'Material Preview' schalten zum Sehen.")
         return {'FINISHED'}

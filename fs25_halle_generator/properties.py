@@ -156,6 +156,12 @@ class HALLE_PG_settings(PropertyGroup):
         description="Optionaler Ordner mit PBR-Texturen. Pro Stil-Key wird automatisch nach "
                     "<key_lowercase>_basecolor.png/_normal.png/_roughness.png/_metallic.png "
                     "gesucht. Leer = nur Procedural Shader.")
+    uv_debug_tile_meters: FloatProperty(
+        name="UV-Grid Kachelgröße",
+        description="Wie viele Meter Wand eine UV-Grid-Kachel überdeckt im Debug-Modus. "
+                    "Groesser = weniger Kacheln = besser lesbare Buchstaben",
+        default=4.0, min=0.25, max=20.0, soft_min=1.0, soft_max=10.0,
+        unit='LENGTH')
 
     # --- FS25 ---
     fs25_origin_floor: BoolProperty(name="Origin Boden-Mitte", default=True)

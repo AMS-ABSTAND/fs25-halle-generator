@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.2] - 2026-05-09
+
+### Changed
+
+- **UV-Debug-Grid is now scaled by a configurable tile size.** Previous
+  version applied the UV grid image directly to the UV layer, which
+  produced way too many tiny tiles on large walls (24 tiles per wall
+  with default uv_scale=1.0) — letters and grid contents were
+  unreadable. New behavior: the operator inserts a Mapping node that
+  scales the UV by `1.0 / tile_meters`, so 1 tile of the test grid
+  covers `tile_meters` meters of wall surface. Default 4 m per tile
+  gives readable grid labels at typical viewport zoom.
+- Added `uv_debug_tile_meters` property to the panel — slider next to
+  the "Grid anwenden" button so users can adjust before clicking.
+- Image texture interpolation set to `Closest` for crisp grid lines
+  (no bilinear smoothing of the test pattern).
+
 ## [1.1.1] - 2026-05-09
 
 ### Added
