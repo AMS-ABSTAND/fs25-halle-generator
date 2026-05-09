@@ -31,3 +31,10 @@ Thumbs.db
 
 # Renders & screenshots build folder
 renders_tmp/
+
+# User texture packs (often big, project-specific, may have non-CC0 content)
+fs25_textures/
+textures/
+
+# Local test scripts
+test_texturepack.py
