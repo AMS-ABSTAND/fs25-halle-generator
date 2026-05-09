@@ -1,7 +1,7 @@
 schema_version = "1.0.0"
 
 id = "fs25_halle_generator"
-version = "1.1.0"
+version = "1.1.1"
 name = "FS25 Halle Generator"
 tagline = "Parametrische Maschinenhallen fuer Farming Simulator 25"
 maintainer = "AMS-ABSTAND"

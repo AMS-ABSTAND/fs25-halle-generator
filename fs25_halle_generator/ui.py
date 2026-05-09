@@ -167,6 +167,9 @@ class HALLE_PT_main(Panel):
             if p.create_uvs:
                 box.prop(p, "uv_strategy")
                 box.prop(p, "uv_scale")
+                box.operator("halle.uv_debug", icon='UV')
+                box.label(text="-> Viewport auf Material Preview schalten",
+                          icon='SHADING_RENDERED')
             box.separator()
             box.prop(p, "fs25_origin_floor")
             box.prop(p, "create_collision")

@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] - 2026-05-09
+
+### Added
+
+- New **UV-Debug-Grid** operator and UI button under FS25 / Material / UV.
+  One click swaps every `Halle_*` material (except glass) to use Blender's
+  built-in 1024x1024 UV_GRID image as basecolor — the colored quadrants
+  and letter labels make it instantly obvious whether UVs are mapped
+  correctly, and at what scale. Click "Halle generieren" again to restore
+  the real materials.
+- Hint in the panel reminding users to switch the viewport to Material
+  Preview mode to actually see materials.
+
+### Fixed
+
+- Adresses a workflow gap from v1.1.0: users who built their own UV test
+  image had to assign it manually to every material. The new operator
+  does this in one click and uses Blender's standard test grid.
+
 ## [1.1.0] - 2026-05-08
 
 ### Added

@@ -360,6 +360,40 @@ shutil.rmtree(tmp_dir, ignore_errors=True)
 
 mat_ok = mat_ok and strategy_ok and tex_ok
 
+
+# ============================================================
+# UV DEBUG GRID: verify operator swaps materials to UV grid image
+# ============================================================
+banner("UV DEBUG GRID operator")
+debug_ok = True
+# We still have generated materials from the texture pack test
+bpy.ops.halle.uv_debug()
+
+img = bpy.data.images.get("Halle_UV_Debug_Grid")
+if img is None:
+    print("  FAIL: UV grid image not created")
+    debug_ok = False
+else:
+    print(f"  OK   UV grid image '{img.name}' exists ({img.size[0]}x{img.size[1]})")
+
+# Check that wall materials now reference the grid image
+swapped = 0
+for mat in bpy.data.materials:
+    if not mat.name.startswith("Halle_") or mat.name == "Halle_Glass":
+        continue
+    if mat.name == "Halle_UV_Debug_Grid":
+        continue
+    img_nodes = [n for n in mat.node_tree.nodes if n.type == 'TEX_IMAGE']
+    if any(n.image and n.image.name == "Halle_UV_Debug_Grid" for n in img_nodes):
+        swapped += 1
+if swapped > 0:
+    print(f"  OK   {swapped} materials swapped to UV grid")
+else:
+    print(f"  FAIL: no materials swapped to UV grid")
+    debug_ok = False
+
+mat_ok = mat_ok and debug_ok
+
 # Summary
 all_ok = all(t[0] for t in tests) and mat_ok
 total_v = sum(t[1] for t in tests)

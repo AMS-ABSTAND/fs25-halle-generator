@@ -17,7 +17,7 @@ Module:
 bl_info = {
     "name": "FS25 Halle Generator",
     "author": "AMS-ABSTAND",
-    "version": (1, 1, 0),
+    "version": (1, 1, 1),
     "blender": (4, 0, 0),
     "location": "View3D > Sidebar (N) > FS25 Halle",
     "description": "Parametrische Maschinenhallen für Farming Simulator 25 — "
@@ -52,6 +52,7 @@ classes = (
     properties.HALLE_PG_settings,
     operators.HALLE_OT_generate,
     operators.HALLE_OT_clear,
+    operators.HALLE_OT_uv_debug,
     ui.HALLE_PT_main,
 )
 
