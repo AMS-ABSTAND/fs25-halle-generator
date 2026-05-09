@@ -131,14 +131,31 @@ class HALLE_PG_settings(PropertyGroup):
 
     # --- Material / UV ---
     create_materials: BoolProperty(name="Materialien anlegen", default=True)
-    create_uvs:       BoolProperty(name="UV-Mapping (planar)", default=True)
+    create_uvs:       BoolProperty(name="UV-Mapping anlegen", default=True)
     uv_scale:         FloatProperty(name="UV-Skala (1/m)", default=1.0, min=0.1, max=10.0,
                                     description="UV-Texeldichte: 1.0 = 1m pro UV-Einheit")
+    uv_strategy: EnumProperty(
+        name="UV-Strategie",
+        items=[
+            ('SMART', "Smart (pro Element passend)",
+             "Wand-lokal für Wände, Slope-aligned für Dachschrägen, Cylinder für Tank/Rinne"),
+            ('PLANAR', "Planar (world-XYZ)",
+             "Einfache Cube-Projektion pro Face — funktioniert immer, aber Texturen können unterschiedlich orientiert sein"),
+        ],
+        default='SMART',
+        description="Wie UVs berechnet werden")
     use_procedural_shaders: BoolProperty(
         name="Procedural Shader",
         description="Nutzt Blender-Shader-Nodes für Trapez/Wood/Brick/Riffel-Patterns. "
                     "Schöne Vorschau ohne externe Texturen, vor I3D-Export ggf. Texturen ergänzen.",
         default=True)
+    texture_pack_path: StringProperty(
+        name="Texture-Pack-Ordner",
+        subtype='DIR_PATH',
+        default="",
+        description="Optionaler Ordner mit PBR-Texturen. Pro Stil-Key wird automatisch nach "
+                    "<key_lowercase>_basecolor.png/_normal.png/_roughness.png/_metallic.png "
+                    "gesucht. Leer = nur Procedural Shader.")
 
     # --- FS25 ---
     fs25_origin_floor: BoolProperty(name="Origin Boden-Mitte", default=True)

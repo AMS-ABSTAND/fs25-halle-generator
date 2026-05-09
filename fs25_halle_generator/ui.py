@@ -157,9 +157,17 @@ class HALLE_PT_main(Panel):
             box.prop(p, "create_materials")
             if p.create_materials:
                 box.prop(p, "use_procedural_shaders")
+                box.label(text="Texture-Pack (optional, leer = nur Procedural):", icon='TEXTURE')
+                box.prop(p, "texture_pack_path", text="")
+                if p.texture_pack_path.strip():
+                    box.label(text="Sucht: <style_key_lowercase>_basecolor.png etc.",
+                              icon='INFO')
+            box.separator()
             box.prop(p, "create_uvs")
             if p.create_uvs:
+                box.prop(p, "uv_strategy")
                 box.prop(p, "uv_scale")
+            box.separator()
             box.prop(p, "fs25_origin_floor")
             box.prop(p, "create_collision")
 

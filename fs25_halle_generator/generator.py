@@ -3,8 +3,20 @@
 from math import radians, tan
 from . import geometry as geom
 from . import materials as mats
+from . import uv
 from . import details
 from . import presets as P
+
+
+def _make_mat_from_preset(name, preset_list, key, props):
+    """Build material — uses texture pack if path is set, else procedural."""
+    tex_dir = props.texture_pack_path.strip() if hasattr(props, 'texture_pack_path') else ""
+    if tex_dir:
+        return mats.make_material_with_textures(
+            name, preset_list, key, tex_dir,
+            use_procedural_fallback=props.use_procedural_shaders)
+    return mats.make_material_from_preset(
+        name, preset_list, key, use_procedural=props.use_procedural_shaders)
 
 
 def generate_hall(props, context):
@@ -43,16 +55,16 @@ def generate_hall(props, context):
         for side_name in ('FRONT', 'BACK', 'LEFT', 'RIGHT'):
             key = props.get_wall_style_for_side(side_name)
             if f'wall_{key}' not in M:
-                M[f'wall_{key}'] = mats.make_material_from_preset(
-                    f"Halle_Wall_{key}", P.WALL_PRESETS, key, use_procedural=use_proc)
+                M[f'wall_{key}'] = _make_mat_from_preset(
+                    f"Halle_Wall_{key}", P.WALL_PRESETS, key, props)
 
         # Roof / Door / Plinth — single style each
-        M['roof']   = mats.make_material_from_preset(
-            f"Halle_Roof_{props.roof_style}", P.ROOF_PRESETS, props.roof_style, use_proc)
-        M['door']   = mats.make_material_from_preset(
-            f"Halle_Door_{props.door_style}", P.DOOR_PRESETS, props.door_style, use_proc)
-        M['plinth'] = mats.make_material_from_preset(
-            f"Halle_Plinth_{props.plinth_style}", P.PLINTH_PRESETS, props.plinth_style, use_proc)
+        M['roof']   = _make_mat_from_preset(
+            f"Halle_Roof_{props.roof_style}", P.ROOF_PRESETS, props.roof_style, props)
+        M['door']   = _make_mat_from_preset(
+            f"Halle_Door_{props.door_style}", P.DOOR_PRESETS, props.door_style, props)
+        M['plinth'] = _make_mat_from_preset(
+            f"Halle_Plinth_{props.plinth_style}", P.PLINTH_PRESETS, props.plinth_style, props)
 
         # Auxiliary materials
         M['concrete'] = mats.make_material("Halle_Concrete", (0.55, 0.55, 0.55), 0.85, 0.0,
@@ -68,17 +80,27 @@ def generate_hall(props, context):
     # ------------------------------------------------------------------
     #  HELPER
     # ------------------------------------------------------------------
-    def add_obj(name, vf, mat=None, uv_scale=None, skip_uv=False):
+    use_smart_uv = (props.uv_strategy == 'SMART')
+
+    def add_obj(name, vf, mat=None, uv_scale=None, skip_uv=False,
+                uv_strategy=None, uv_params=None):
         """Create an object from (verts, faces). Auto-creates UV map when
         `props.create_uvs` is enabled, even if `uv_scale` is not passed
-        — falls back to `props.uv_scale`. Pass `skip_uv=True` to opt out
-        (used for the wireframe collision box where UVs are useless)."""
+        — falls back to `props.uv_scale`. Pass `skip_uv=True` to opt out.
+
+        `uv_strategy` (string) and `uv_params` (dict) override the default
+        strategy. When `props.uv_strategy='PLANAR'`, hints are ignored and
+        all objects get planar projection."""
         if not vf or not vf[0]:
             return None
         obj = geom.make_object(name, vf[0], vf[1], col, mat=mat)
         if props.create_uvs and not skip_uv:
             scale = uv_scale if uv_scale is not None else props.uv_scale
-            mats.set_uvs_planar(obj, scale=scale)
+            if use_smart_uv and uv_strategy:
+                uv.apply(obj, strategy=uv_strategy, scale=scale,
+                         **(uv_params or {}))
+            else:
+                uv.apply(obj, strategy='PLANAR', scale=scale)
         created.append(obj)
         return obj
 
@@ -90,7 +112,8 @@ def generate_hall(props, context):
         add_obj(f"{base}_Floor",
                 geom.box(-half_w - ext, +half_w + ext,
                          -half_d - ext, +half_d + ext, -ft, 0.0),
-                mat=M.get('concrete'), uv_scale=props.uv_scale)
+                mat=M.get('concrete'),
+                uv_strategy='FLAT_XY')
 
     # ------------------------------------------------------------------
     #  PLINTH
@@ -98,8 +121,9 @@ def generate_hall(props, context):
     if props.create_plinth and props.plinth_height > 0:
         items = geom.build_plinth(props, half_w, half_d)
         if items:
-            add_obj(f"{base}_Plinth", geom.merge(items),
-                    mat=M.get('plinth'), uv_scale=props.uv_scale)
+            # Plinth wraps around the building — planar projection works fine
+            # since the dominant axis per face determines projection plane
+            add_obj(f"{base}_Plinth", geom.merge(items), mat=M.get('plinth'))
 
     # ------------------------------------------------------------------
     #  DOOR POSITIONS PER SIDE
@@ -127,39 +151,49 @@ def generate_hall(props, context):
         use_3d_profile = (props.wall_3d_profile and
                           P.is_trapez_style(P.WALL_PRESETS, wall_style))
 
+        wall_uv_kwargs = {'uv_strategy': 'WALL', 'uv_params': {'side': side}}
+
         if use_3d_profile:
             wall_vf, skin_vf = geom.build_wall_with_trapez_skin(
                 side, props, half_w, half_d, doors_here, windows_here)
             if wall_vf[0]:
                 add_obj(f"{base}_Wall_{side.capitalize()}", wall_vf,
-                        mat=wall_mat, uv_scale=props.uv_scale)
+                        mat=wall_mat, **wall_uv_kwargs)
             if skin_vf[0]:
                 add_obj(f"{base}_Wall_{side.capitalize()}_Skin", skin_vf,
-                        mat=wall_mat, uv_scale=props.uv_scale)
+                        mat=wall_mat, **wall_uv_kwargs)
         else:
             v, f = geom.build_wall(side, props, half_w, half_d, doors_here, windows_here)
             if v:
                 add_obj(f"{base}_Wall_{side.capitalize()}", (v, f),
-                        mat=wall_mat, uv_scale=props.uv_scale)
+                        mat=wall_mat, **wall_uv_kwargs)
 
     # ------------------------------------------------------------------
     #  ROOF
     # ------------------------------------------------------------------
     if props.roof_type == 'GABLE':
+        eave_z = H - props.roof_overhang_eaves * tan(pitch)
         for sign, name in ((-1, 'Left'), (+1, 'Right')):
             v, f = geom.build_gable_slope(sign, props, half_w, half_d, ridge_z)
+            eave_x = sign * (half_w + props.roof_overhang_eaves)
             add_obj(f"{base}_Roof_{name}", (v, f),
-                    mat=M.get('roof'), uv_scale=props.uv_scale)
+                    mat=M.get('roof'),
+                    uv_strategy='GABLE_SLOPE',
+                    uv_params={'sign': sign, 'eave_x': eave_x,
+                               'eave_z': eave_z, 'pitch_rad': pitch})
         if props.create_ridge_cap:
             add_obj(f"{base}_RidgeCap",
                     geom.build_ridge_cap(props, half_w, half_d, ridge_z),
-                    mat=M.get('roof'), uv_scale=props.uv_scale)
+                    mat=M.get('roof'))
     elif props.roof_type == 'SHED':
         v, f = geom.build_shed_roof(props, half_w, half_d)
-        add_obj(f"{base}_Roof", (v, f), mat=M.get('roof'), uv_scale=props.uv_scale)
+        add_obj(f"{base}_Roof", (v, f), mat=M.get('roof'),
+                uv_strategy='SHED_SLOPE',
+                uv_params={'props': props, 'half_w': half_w, 'half_d': half_d})
     elif props.roof_type == 'FLAT':
         v, f = geom.build_flat_roof(props, half_w, half_d)
-        add_obj(f"{base}_Roof", (v, f), mat=M.get('roof'), uv_scale=props.uv_scale)
+        add_obj(f"{base}_Roof", (v, f), mat=M.get('roof'),
+                uv_strategy='FLAT_XY')
 
     # ------------------------------------------------------------------
     #  GUTTERS
@@ -174,6 +208,7 @@ def generate_hall(props, context):
     # ------------------------------------------------------------------
     door_idx = 1
     for side in ('FRONT', 'BACK', 'LEFT', 'RIGHT'):
+        door_uv = {'uv_strategy': 'WALL', 'uv_params': {'side': side}}
         for cx in door_centers[side]:
             if props.door_sectional:
                 pn = props.door_panel_count
@@ -185,7 +220,7 @@ def generate_hall(props, context):
                     v, f = geom.build_door_panel_box(side, cx, props.door_width,
                                                     z1, z2, half_w, half_d, T)
                     obj = add_obj(f"{base}_Door_{door_idx:02d}_Panel{k+1}",
-                                  (v, f), mat=M.get('door'), uv_scale=props.uv_scale)
+                                  (v, f), mat=M.get('door'), **door_uv)
                     if obj:
                         origin = geom.door_panel_origin(side, cx, props.door_width, z1,
                                                        half_w, half_d, T)
@@ -195,7 +230,7 @@ def generate_hall(props, context):
                                                 0.05, props.door_height - 0.02,
                                                 half_w, half_d, T)
                 obj = add_obj(f"{base}_Door_{door_idx:02d}", (v, f),
-                              mat=M.get('door'), uv_scale=props.uv_scale)
+                              mat=M.get('door'), **door_uv)
                 if obj:
                     origin = geom.door_panel_origin(side, cx, props.door_width, 0.0,
                                                    half_w, half_d, T)
@@ -211,7 +246,8 @@ def generate_hall(props, context):
         for lx1, lx2, z1, z2 in cuts:
             v, f = geom.build_window_glass(side, lx1, lx2, z1, z2, half_w, half_d, T)
             add_obj(f"{base}_Window_{side.capitalize()}_{win_idx:02d}", (v, f),
-                    mat=M.get('glass'), uv_scale=props.uv_scale)
+                    mat=M.get('glass'),
+                    uv_strategy='WALL', uv_params={'side': side})
             win_idx += 1
 
     # ------------------------------------------------------------------

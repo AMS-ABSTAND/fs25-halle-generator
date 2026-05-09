@@ -17,7 +17,7 @@ Module:
 bl_info = {
     "name": "FS25 Halle Generator",
     "author": "AMS-ABSTAND",
-    "version": (1, 0, 1),
+    "version": (1, 1, 0),
     "blender": (4, 0, 0),
     "location": "View3D > Sidebar (N) > FS25 Halle",
     "description": "Parametrische Maschinenhallen für Farming Simulator 25 — "
@@ -29,7 +29,7 @@ bl_info = {
 # Reload-Support für Blender-Reload-Skripte (F3 → "Reload Scripts")
 if "bpy" in locals():
     import importlib
-    for mod_name in ("presets", "properties", "materials", "geometry",
+    for mod_name in ("presets", "properties", "materials", "uv", "geometry",
                      "details", "generator", "operators", "ui"):
         if mod_name in locals():
             importlib.reload(locals()[mod_name])
@@ -40,6 +40,7 @@ from bpy.props import PointerProperty
 from . import presets
 from . import properties
 from . import materials
+from . import uv
 from . import geometry
 from . import details
 from . import generator

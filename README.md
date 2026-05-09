@@ -58,7 +58,26 @@ geometry on metal sheet walls.
   overlay, only on TRAPEZ-styled walls. About 2300 extra faces per wall set.
 - Eaves gutters (Dachrinnen) on sloped roofs
 - Ridge cap (Firstziegel) on gable roofs
-- Planar UV projection per face
+
+### UV mapping
+
+Two strategies, switchable in the UI:
+
+- **Smart** (default): per-element projection — walls get U along wall
+  length and V along height, gable roof slopes get U along the ridge
+  and V along the slope direction (eave to ridge), shed roofs follow
+  the high-side direction, floor and flat roof use planar XY.
+- **Planar**: cube-projection per face based on dominant normal axis
+  (legacy v1.0 behavior).
+
+### Texture pack
+
+Optional `texture_pack_path` property points at a folder of PBR images.
+For each material, the addon auto-loads files named
+`<style_key_lowercase>_<map>.<ext>` and builds a proper PBR shader
+graph. Recognized maps: basecolor / albedo / diffuse / color, normal,
+roughness, metallic. Falls back to procedural shader if no basecolor
+texture is present for a given style.
 
 | Wood walls with clay tile roof | 3D Trapezblech profile (visible corrugation) |
 | --- | --- |

@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-05-08
+
+### Added
+
+- **Smart UV-Mapping**: new `uv.py` module dispatches per element type.
+  Walls get `WALL` strategy (U along wall length, V height — texture reads
+  consistently across all walls). Gable roof slopes get `GABLE_SLOPE`
+  (U along ridge, V along slope from eave to ridge). Shed roofs get
+  `SHED_SLOPE` keyed on `shed_high_side`. Floor and flat roof get
+  `FLAT_XY`. Old planar projection kept as fallback / opt-in via the
+  new `UV-Strategie` dropdown.
+- **Texture-Pack-Loading**: new `texture_pack_path` property in the UI.
+  When set to a directory, the addon auto-loads images named
+  `<style_key_lowercase>_<map>.<ext>` and builds proper PBR shader graphs
+  with Image Texture + Normal Map + Roughness + Metallic inputs.
+  Recognized suffixes: basecolor/albedo/diffuse/color, normal/nrm/n,
+  roughness/rough/r, metallic/metal/m. Falls back to procedural shader
+  if no basecolor texture is present for a given style.
+- New regression tests: WALL-strategy UV ranges verified on the front
+  wall, texture-pack loading verified by generating a synthetic test PNG
+  and checking that the resulting material gets an Image Texture node.
+
+### Changed
+
+- The `mats.set_uvs_planar` legacy entry point still works but new code
+  in `generator.py` routes through `uv.apply()` for clarity.
+
 ## [1.0.1] - 2026-05-08
 
 ### Fixed

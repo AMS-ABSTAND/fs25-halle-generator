@@ -1,14 +1,19 @@
-"""Material-Erzeugung mit Procedural Shader Nodes.
+"""Material-Erzeugung mit Procedural Shader Nodes oder Bild-Texturen.
 
-Jedes Pattern (TRAPEZ, WOOD, CLINKER, RIFFEL, ...) bekommt eine eigene
-Shader-Node-Konfiguration angehängt, die im Blender-Viewport eine plausible
-Vorschau gibt — ohne externe Texturen.
+Wenn ein Texture-Pack-Pfad gesetzt ist, werden für jedes Material Bilder
+mit der Namenskonvention `<style_key_lowercase>_basecolor.png` etc. geladen.
+Sonst (oder wenn die Bilder fehlen) Procedural-Fallback mit Wave/Noise/Brick-
+Nodes.
 
-Vor dem I3D-Export sollten echte Texturen drüber gelegt werden; die Material-
-Namen tragen den Style-Key (z.B. `Halle_Wall_WOOD_DARK`), damit man weiß was
-da hingehört.
+Erkannte Suffixe (case-insensitive):
+    Base color:  _basecolor, _albedo, _diffuse, _color, _diff, _col
+    Normal:      _normal, _nrm, _norm, _n
+    Roughness:   _roughness, _rough, _r
+    Metallic:    _metallic, _metal, _m
+    AO:          _ao, _ambientocclusion
 """
 
+import os
 import bpy
 
 from . import presets
@@ -320,11 +325,107 @@ def make_material_from_preset(name, preset_list, key, use_procedural=True):
 
 
 # ============================================================================
-#  UV MAPPING (planar world-space projection per face)
+#  TEXTURE PACK LOADING
+# ============================================================================
+
+_BASECOLOR_SUFFIXES = ['_basecolor', '_albedo', '_diffuse', '_color', '_diff', '_col']
+_NORMAL_SUFFIXES    = ['_normal', '_nrm', '_norm', '_n']
+_ROUGHNESS_SUFFIXES = ['_roughness', '_rough', '_r']
+_METALLIC_SUFFIXES  = ['_metallic', '_metal', '_m']
+_AO_SUFFIXES        = ['_ao', '_ambientocclusion', '_occlusion']
+_IMAGE_EXTS         = ['.png', '.jpg', '.jpeg', '.tga', '.tif', '.tiff', '.exr']
+
+
+def _find_texture(directory, key, suffixes):
+    """Look for `<key>_<suffix>.<ext>` (case-insensitive) in directory."""
+    if not directory or not os.path.isdir(directory):
+        return None
+    key_lower = key.lower()
+    try:
+        files = os.listdir(directory)
+    except OSError:
+        return None
+    files_lower = {f.lower(): f for f in files}
+    for suffix in suffixes:
+        for ext in _IMAGE_EXTS:
+            candidate = (key_lower + suffix + ext).lower()
+            if candidate in files_lower:
+                return os.path.join(directory, files_lower[candidate])
+    return None
+
+
+def _load_image(path):
+    """Load image into Blender, reuse if already loaded."""
+    img = bpy.data.images.load(path, check_existing=True)
+    return img
+
+
+def make_material_with_textures(name, preset_list, key, texture_dir,
+                                use_procedural_fallback=True):
+    """Build a PBR material from images in `texture_dir`. Files named
+    `<key_lowercase>_<map>.<ext>` are auto-detected. Falls back to procedural
+    if no basecolor texture is found."""
+    color, roughness, metallic, pattern = presets.lookup(preset_list, key)
+
+    bc_path = _find_texture(texture_dir, key, _BASECOLOR_SUFFIXES)
+    if bc_path is None:
+        # No texture pack for this style → procedural / flat color fallback
+        return make_material(name, color, roughness, metallic,
+                             pattern=pattern,
+                             use_procedural=use_procedural_fallback)
+
+    # Texture-based PBR material
+    mat, bsdf, nt = _make_base_material(name, color, roughness, metallic)
+
+    # Base color
+    bc_node = nt.nodes.new("ShaderNodeTexImage")
+    bc_node.location = (-500, 200)
+    bc_node.image = _load_image(bc_path)
+    nt.links.new(bc_node.outputs['Color'], bsdf.inputs['Base Color'])
+
+    # Normal map
+    n_path = _find_texture(texture_dir, key, _NORMAL_SUFFIXES)
+    if n_path:
+        n_node = nt.nodes.new("ShaderNodeTexImage")
+        n_node.location = (-700, -100)
+        n_img = _load_image(n_path)
+        n_img.colorspace_settings.name = 'Non-Color'
+        n_node.image = n_img
+        nrm = nt.nodes.new("ShaderNodeNormalMap")
+        nrm.location = (-300, -100)
+        nt.links.new(n_node.outputs['Color'], nrm.inputs['Color'])
+        nt.links.new(nrm.outputs['Normal'], bsdf.inputs['Normal'])
+
+    # Roughness
+    r_path = _find_texture(texture_dir, key, _ROUGHNESS_SUFFIXES)
+    if r_path:
+        r_node = nt.nodes.new("ShaderNodeTexImage")
+        r_node.location = (-500, -350)
+        r_img = _load_image(r_path)
+        r_img.colorspace_settings.name = 'Non-Color'
+        r_node.image = r_img
+        nt.links.new(r_node.outputs['Color'], bsdf.inputs['Roughness'])
+
+    # Metallic
+    m_path = _find_texture(texture_dir, key, _METALLIC_SUFFIXES)
+    if m_path:
+        m_node = nt.nodes.new("ShaderNodeTexImage")
+        m_node.location = (-500, -550)
+        m_img = _load_image(m_path)
+        m_img.colorspace_settings.name = 'Non-Color'
+        m_node.image = m_img
+        nt.links.new(m_node.outputs['Color'], bsdf.inputs['Metallic'])
+
+    return mat
+
+
+# ============================================================================
+#  UV MAPPING (legacy — kept for backward compat; new code uses uv.apply())
 # ============================================================================
 
 def set_uvs_planar(obj, scale=1.0):
-    """Planar UV projection per face based on dominant normal axis."""
+    """Planar UV projection per face based on dominant normal axis.
+    Legacy entry point — equivalent to ``uv.apply(obj, strategy='PLANAR', scale=scale)``."""
     mesh = obj.data
     if not mesh.uv_layers:
         mesh.uv_layers.new(name="UVMap")

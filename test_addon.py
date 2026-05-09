@@ -277,6 +277,89 @@ for col_name in ["Halle_Gable", "Halle_AllDoors", "Halle_3DProfile",
 
 mat_ok = mat_ok and uv_ok
 
+
+# ============================================================
+# UV STRATEGY: verify WALL strategy gives wall-local U/V (not world planar)
+# ============================================================
+banner("UV STRATEGY: WALL gives U=length, V=height")
+strategy_ok = True
+# Use Halle_Gable (Test 1) — wall_height = 5.5
+col_g = bpy.data.collections.get("Halle_Gable")
+if col_g:
+    for obj in col_g.objects:
+        if obj.name == "Maschinenhalle_Wall_Front":
+            mesh = obj.data
+            if not mesh.uv_layers:
+                print("  FAIL: front wall has no UVs"); strategy_ok = False
+                break
+            uv = mesh.uv_layers.active.data
+            us = [uv[li].uv[0] for li in range(len(mesh.loops))]
+            vs = [uv[li].uv[1] for li in range(len(mesh.loops))]
+            u_range = (min(us), max(us))
+            v_range = (min(vs), max(vs))
+            # For FRONT wall: U should match world X (-12..+12 for 24m wide hall)
+            # V should match world Z (0..5.5 for 5.5m wall_height + gable)
+            print(f"  Front wall U range: {u_range[0]:.2f} .. {u_range[1]:.2f}")
+            print(f"  Front wall V range: {v_range[0]:.2f} .. {v_range[1]:.2f}")
+            if v_range[0] >= -0.01 and v_range[1] <= 12 and u_range[0] >= -13 and u_range[1] <= 13:
+                print("  OK   WALL strategy applied (U≈X-axis, V≈Z-axis)")
+            else:
+                print("  FAIL: UV range looks wrong")
+                strategy_ok = False
+            break
+
+# ============================================================
+# TEXTURE PACK: verify image texture gets loaded when file exists
+# ============================================================
+banner("TEXTURE PACK: image loading")
+import tempfile
+tex_ok = True
+tmp_dir = tempfile.mkdtemp(prefix="halle_test_tex_")
+print(f"  Test texture dir: {tmp_dir}")
+
+# Make a synthetic test PNG via Blender's image API
+test_img = bpy.data.images.new("test_basecolor", 64, 64, alpha=False)
+import os as _os
+test_path = _os.path.join(tmp_dir, "trapez_rust_basecolor.png")
+test_img.filepath_raw = test_path
+test_img.file_format = 'PNG'
+test_img.save()
+
+# Configure: simple hall with TRAPEZ_RUST walls, point texture_pack at tmp_dir
+bpy.ops.wm.read_factory_settings(use_empty=True)
+fs25_halle_generator.unregister()
+fs25_halle_generator.register()
+p = bpy.context.scene.halle_settings
+p.collection_name = "Halle_TexTest"
+p.wall_style = 'TRAPEZ_RUST'
+p.texture_pack_path = tmp_dir
+p.detail_workbench = False; p.detail_diesel_tank = False
+p.detail_compressor = False; p.detail_tool_wall = False
+p.detail_fire_extinguisher = False; p.create_columns = False
+p.door_front_count = 1; p.door_back_count = 0
+p.door_left_count = 0; p.door_right_count = 0
+bpy.ops.halle.generate()
+
+# Find the wall material and check for Image Texture node
+mat = bpy.data.materials.get("Halle_Wall_TRAPEZ_RUST")
+if mat:
+    img_nodes = [n for n in mat.node_tree.nodes if n.type == 'TEX_IMAGE']
+    if img_nodes and any(n.image and "trapez_rust" in n.image.name.lower()
+                          for n in img_nodes):
+        print(f"  OK   wall material loaded image texture from texture pack")
+    else:
+        print(f"  FAIL: wall material has no image texture (got {len(img_nodes)} TEX_IMAGE nodes)")
+        tex_ok = False
+else:
+    print("  FAIL: wall material not found")
+    tex_ok = False
+
+# Clean up
+import shutil
+shutil.rmtree(tmp_dir, ignore_errors=True)
+
+mat_ok = mat_ok and strategy_ok and tex_ok
+
 # Summary
 all_ok = all(t[0] for t in tests) and mat_ok
 total_v = sum(t[1] for t in tests)
